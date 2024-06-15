@@ -5,8 +5,12 @@ Implement Deep Learning from scratch with rust
 
 Target One :
 - [ ] Basic MLP
-    - [ ] Perceptron
-    - [ ] Graph computation
+    - [X] Perceptron
+        - [X] weights
+        - [X] bias
+        - [X] sigmoid
+    - [X] Forward
     - [ ] Gradien Calculation
+    - [ ] Graph computation
     - [ ] Backward
     - [ ] Update Models
