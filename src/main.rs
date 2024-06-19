@@ -36,7 +36,7 @@ const LOSS_BCE: LossFunction =  LossFunction {
         }
     },
     forward: |a: f32, y_hat: f32| -> f32 {
-        - y_hat * a.log10() - (1f32-y_hat)*(1f32-a).log10()
+        - y_hat * a.log10() - (1f32-y_hat)*(1f32-a + EPSILON).log10()
     },
 };
 
