@@ -280,7 +280,7 @@ fn train(network: &mut Network, input_size: usize, iter: i32){
         let loss = (LOSS_BCE.forward)(a, y_hat);
         let gradient = (LOSS_BCE.derivate)(a, y_hat);
         network.backward(gradient);
-        network.update(0.1);
+        network.update(0.1f32);
 
         // if i%10 == 0 {
         //     println!("{}", loss);
@@ -291,6 +291,6 @@ fn train(network: &mut Network, input_size: usize, iter: i32){
 fn main() {
     let input_size : usize = 10;
     let mut network : Network = build_model(input_size);
-    train(&mut network, input_size, 100);
+    train(&mut network, input_size, 10);
 
 }
