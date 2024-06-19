@@ -80,11 +80,9 @@ impl Node {
 
     fn init_weight(&mut self) {
         let mut rng = rand::thread_rng();
-        let dist = Uniform::from(-100f32..=100f32);
+        let dist = Uniform::from(-1f32..=1f32);
         
-        for w in &mut self.weights{
-            *w = dist.sample(&mut rng);
-        }
+        self.weights = dist.sample_iter(&mut rng).take(self.input_size).collect();
         self.bias = dist.sample(&mut rng);
     }
 
