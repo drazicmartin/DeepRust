@@ -173,8 +173,6 @@ impl Layer {
         let size = accumulated_gradients.len();
         let mut average_gradients: Vec<f32> = vec![0f32; size];
         for idx in 0..self.nodes.len() {
-            println!(" layer nodes : {}", self.nodes.len());
-            println!(" layer accumulated grad : {}", accumulated_gradients[idx]);
             let node_output = self.nodes[idx].backward(accumulated_gradients[idx]);
             average_gradients = average_gradients.iter().zip(&node_output).map(|(a, b)| a + b).collect();
         }
