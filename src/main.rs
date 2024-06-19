@@ -6,12 +6,16 @@ struct Function {
     forward: fn(f32) -> f32,
 }
 
+fn sigmoid(x : f32) -> f32{
+    1f32/(1f32 + (-x).exp())
+}
+
 const SIGMOID: Function =  Function {
     derivate: |x: f32| -> f32 {
-        (1f32/(1f32 + x.exp()))*(1f32-(1f32/(1f32 + x.exp())))
+        sigmoid(x)*(1f32-sigmoid(x))
     },
     forward: |x: f32| -> f32 {
-        1f32/(1f32 + x.exp())
+        sigmoid(x)
     },
 };
 
