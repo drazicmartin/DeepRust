@@ -1,3 +1,5 @@
+use std::ptr::null;
+
 use rand::distributions::{Distribution, Uniform};
 use rand::Rng;
 
@@ -6,9 +8,16 @@ struct Function {
     forward: fn(f32) -> f32,
 }
 
+struct LossFunction {
+    derivate: fn(f32, f32) -> f32,
+    forward: fn(f32, f32) -> f32,
+}
+
 fn sigmoid(x : f32) -> f32{
     1f32/(1f32 + (-x).exp())
 }
+
+const EPSILON: f32 = 1e-10;
 
 const SIGMOID: Function =  Function {
     derivate: |x: f32| -> f32 {
@@ -19,13 +28,28 @@ const SIGMOID: Function =  Function {
     },
 };
 
+const LOSS_BCE: LossFunction =  LossFunction {
+    derivate: |a: f32, y_hat: f32| -> f32 {
+        match a {
+            a if a == 0f32 => -100f32,
+            _ => -y_hat/a + (1f32-y_hat)/(1f32-a + EPSILON)
+        }
+    },
+    forward: |a: f32, y_hat: f32| -> f32 {
+        - y_hat * a.log10() - (1f32-y_hat)*(1f32-a).log10()
+    },
+};
+
 // Node will be the basic of Perceptron
 struct Node {
     auto_grad: bool,
-    gradients: Vec<f32>,
     weights: Vec<f32>,
+    weight_gradients: Vec<f32>,
     bias: f32,
+    bias_gradient: f32,
     activation_function: Function,
+    saved_input: Vec<f32>,
+    saved_z: f32,
     input_size: usize,
 }
 
@@ -33,11 +57,14 @@ impl Node {
     fn new(input_size: usize) -> Self {
         Node {
             auto_grad: true,
-            gradients: vec![0f32; input_size],
             activation_function: SIGMOID,
+            weights: vec![0f32; input_size],
+            weight_gradients: vec![0f32; input_size],
+            bias_gradient: 0f32,
             bias: 0f32,
             input_size: input_size,
-            weights: vec![0f32; input_size],
+            saved_input: vec![0f32; input_size],
+            saved_z: 0f32,
         }
     }
 
@@ -61,20 +88,38 @@ impl Node {
         self.bias = dist.sample(&mut rng);
     }
 
-    fn forward(mut self, input: Vec<f32>) -> f32 {
+    fn forward(&mut self, input: Vec<f32>) -> f32 {
         let mut weighted_sum: f32 = 0f32;
         // assert!(input.len() == self.weights.len());
-
+        
         for (x, w) in input.iter().zip(self.weights.iter()).collect::<Vec<_>>() {
             weighted_sum += x*w
         }
+        self.saved_input = input;
+        self.saved_z = weighted_sum;
         weighted_sum += self.bias;
 
+        (self.activation_function.forward)(weighted_sum)
+    }
+
+    fn backward(&mut self, accumulated_gradient: f32) -> Vec<f32>{
+        self.bias_gradient = accumulated_gradient * (self.activation_function.derivate)(self.saved_z);
+        let mut accumulated_gradients: Vec<f32> = vec![self.bias_gradient; self.input_size];
+        
         for idx in 0..self.input_size {
-            self.gradients[idx] = input[idx]*((self.activation_function.derivate)(weighted_sum))
+            self.weight_gradients[idx] = self.bias_gradient * self.saved_input[idx];
+
+            accumulated_gradients[idx] *= self.weights[idx];
         }
 
-        (self.activation_function.forward)(weighted_sum)
+        accumulated_gradients
+    }
+
+    fn update(&mut self, learning_rate: f32) {
+        self.bias -= learning_rate * self.bias_gradient;
+        for idx in 0..self.input_size {
+            self.weights[idx] -= learning_rate * self.weight_gradients[idx];
+        }
     }
 }
 
@@ -118,12 +163,32 @@ impl Layer {
         nodes
     }
 
-    fn forward(self, input: Vec<f32>) -> Vec<f32> {
+    fn forward(&mut self, input: Vec<f32>) -> Vec<f32> {
         let mut output: Vec<f32> = Vec::new();
-        for node in self.nodes {
+        for node in &mut self.nodes {
             output.push(node.forward(input.clone()));
         }
         output
+    }
+
+    fn backward(&mut self, accumulated_gradients: Vec<f32>) -> Vec<f32> {
+        let size = accumulated_gradients.len();
+        let mut average_gradients: Vec<f32> = vec![0f32; size];
+        for idx in 0..self.nodes.len() {
+            println!(" layer nodes : {}", self.nodes.len());
+            println!(" layer accumulated grad : {}", accumulated_gradients[idx]);
+            let node_output = self.nodes[idx].backward(accumulated_gradients[idx]);
+            average_gradients = average_gradients.iter().zip(&node_output).map(|(a, b)| a + b).collect();
+        }
+        average_gradients = average_gradients.iter().map(|a| a / size as f32).collect();
+
+        average_gradients
+    }
+
+    fn update(&mut self, learning_rate: f32){
+        for idx in 0..self.nodes.len() {
+            self.nodes[idx].update(learning_rate);
+        }
     }
 }
 
@@ -155,12 +220,33 @@ impl Network {
         self.layers.push(layer);
     }
 
-    fn forward(self, input: Vec<f32>) -> Vec<f32> {
+    fn forward(&mut self, input: Vec<f32>) -> Vec<f32> {
         let mut output: Vec<f32> = input;
-        for layer in self.layers {
+        for layer in &mut self.layers {
             output = layer.forward(output);
         }
         output
+    }
+
+    fn backward(&mut self, loss_gradient: f32) {
+        if let Some(last_layer) = self.layers.last() {
+            let size_last_layer = last_layer.nodes.len();
+            println!("grad {:?}", loss_gradient);
+            let mut accumulated_gradients = vec![loss_gradient; size_last_layer];
+
+
+            for idx in (0..self.layers.len()).rev(){
+                accumulated_gradients = self.layers[idx].backward(accumulated_gradients);
+            }
+        } else {
+            println!("Network is empty");
+        }
+    }
+
+    fn update(&mut self, learning_rate: f32) {
+        for idx in (0..self.layers.len()).rev(){
+            self.layers[idx].update(learning_rate);
+        }
     }
 }
 
@@ -180,19 +266,25 @@ fn build_model(input_size: usize) -> Network {
         Layer::new(30, 40)
     );
     mlp.add_layer(
-        Layer::new(40, 10)
+        Layer::new(40, 1)
     );
 
     mlp
 }
 
-
 fn main() {
     let input_size : usize = 10;
-    let network : Network = build_model(input_size);
+    let mut network : Network = build_model(input_size);
     let input = vec![1f32; input_size];
-    let output: Vec<f32> = network.forward(input.clone());
+    let a: f32 = network.forward(input.clone())[0];
+    let y_hat = 1f32;
 
     println!("Input  : {:?}", input);
-    println!("Output : {:?}", output);
+    println!("Output : {:?}", a);
+
+    // let loss = (LOSS_BCE.forward)(a, y_hat);
+    let gradient = (LOSS_BCE.derivate)(a, y_hat);
+    network.backward(gradient);
+    network.update(0.01);
+
 }
