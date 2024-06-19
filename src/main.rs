@@ -272,19 +272,31 @@ fn build_model(input_size: usize) -> Network {
     mlp
 }
 
+fn train(network: &mut Network, input_size: usize, iter: i32){
+    let mut rng = rand::thread_rng();
+    let dist = Uniform::from(0f32..=1f32);
+    for i in 0..iter {
+        let input: Vec<f32> = dist.sample_iter(&mut rng).take(input_size).collect();
+        let a: f32 = network.forward(input.clone())[0];
+
+        println!("output : {}", a);
+
+        let y_hat = 1f32;
+
+        let loss = (LOSS_BCE.forward)(a, y_hat);
+        let gradient = (LOSS_BCE.derivate)(a, y_hat);
+        network.backward(gradient);
+        network.update(0.1);
+
+        // if i%10 == 0 {
+        //     println!("{}", loss);
+        // }
+    }
+}
+
 fn main() {
     let input_size : usize = 10;
     let mut network : Network = build_model(input_size);
-    let input = vec![1f32; input_size];
-    let a: f32 = network.forward(input.clone())[0];
-    let y_hat = 1f32;
-
-    println!("Input  : {:?}", input);
-    println!("Output : {:?}", a);
-
-    // let loss = (LOSS_BCE.forward)(a, y_hat);
-    let gradient = (LOSS_BCE.derivate)(a, y_hat);
-    network.backward(gradient);
-    network.update(0.01);
+    train(&mut network, input_size, 100);
 
 }
