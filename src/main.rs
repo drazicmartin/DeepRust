@@ -228,10 +228,8 @@ impl Network {
 
     fn backward(&mut self, loss_gradient: f32) {
         if let Some(last_layer) = self.layers.last() {
-            let size_last_layer = last_layer.nodes.len();
-            println!("grad {:?}", loss_gradient);
+            let size_last_layer = last_layer.input_size;
             let mut accumulated_gradients = vec![loss_gradient; size_last_layer];
-
 
             for idx in (0..self.layers.len()).rev(){
                 accumulated_gradients = self.layers[idx].backward(accumulated_gradients);
