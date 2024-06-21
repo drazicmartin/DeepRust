@@ -20,6 +20,21 @@ const SIGMOID: Function =  Function {
     },
 };
 
+pub const RELU: Function =  Function {
+    derivate: |x: f32| -> f32 {
+        match x {
+            x if x <= 0f32 => 0f32,
+            _ => 1f32
+        }
+    },
+    forward: |x: f32| -> f32 {
+        match x {
+            x if x <= 0f32 => 0f32,
+            _ => x
+        }
+    },
+};
+
 // Node will be the basic of Perceptron
 pub struct Node {
     auto_grad: bool,
