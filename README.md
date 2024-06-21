@@ -9,7 +9,7 @@ Target One :
         - [X] weights
         - [X] bias
         - [X] sigmoid
-        - [ ] ReLu
+        - [X] ReLu
     - [X] Forward
     - [X] Gradien Calculation
     - [x] Backward
