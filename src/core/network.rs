@@ -1,6 +1,7 @@
 use rand::distributions::{Distribution, Uniform};
 
-struct Function {
+#[derive(Copy, Clone)]
+pub struct Function {
     derivate: fn(f32) -> f32,
     forward: fn(f32) -> f32,
 }
@@ -11,7 +12,7 @@ fn sigmoid(x : f32) -> f32{
 
 pub const EPSILON: f32 = 1e-10;
 
-const SIGMOID: Function =  Function {
+pub const SIGMOID: Function =  Function {
     derivate: |x: f32| -> f32 {
         sigmoid(x)*(1f32-sigmoid(x))
     },
@@ -53,6 +54,20 @@ impl Node {
         Node {
             auto_grad: true,
             activation_function: SIGMOID,
+            weights: vec![0f32; input_size],
+            weight_gradients: vec![0f32; input_size],
+            bias_gradient: 0f32,
+            bias: 0f32,
+            input_size: input_size,
+            saved_input: vec![0f32; input_size],
+            saved_z: 0f32,
+        }
+    }
+
+    fn new_with_activation(input_size: usize, activation : Function) -> Self {
+        Node {
+            auto_grad: true,
+            activation_function: activation,
             weights: vec![0f32; input_size],
             weight_gradients: vec![0f32; input_size],
             bias_gradient: 0f32,
@@ -124,9 +139,17 @@ pub struct Layer {
 }
 
 impl Layer {
-    fn new(input_size: usize, size: usize) -> Self {
+    pub fn new(input_size: usize, size: usize) -> Self {
         Layer {
             nodes: Layer::get_default_nodes(input_size, size),
+            input_size,
+            size,
+        }
+    }
+
+    pub fn new_with_activation(input_size: usize, size: usize, activation : Function) -> Self {
+        Layer {
+            nodes: Layer::get_default_activation_nodes(input_size, size, activation),
             input_size,
             size,
         }
@@ -155,6 +178,18 @@ impl Layer {
         }
         nodes
     }
+
+    fn get_default_activation_nodes(input_size: usize, size: usize, activation : Function) -> Vec<Node> { 
+        let mut nodes: Vec<Node> = Vec::new();
+        for _idx in 0..size {
+            let mut node = Node::new_with_activation(input_size, activation.clone());
+            node.init_weight();
+            nodes.push(
+                node
+            );
+        }
+        nodes
+    } 
 
     fn forward(&mut self, input: Vec<f32>) -> Vec<f32> {
         let mut output: Vec<f32> = Vec::new();
@@ -189,7 +224,7 @@ pub struct Network {
 }
 
 impl Network {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Network {
             layers: Vec::new(),
         }
@@ -207,7 +242,7 @@ impl Network {
         self.set_autograd(true);
     }
 
-    fn add_layer(&mut self, layer: Layer) {
+    pub fn add_layer(&mut self, layer: Layer) {
         self.layers.push(layer);
     }
 
