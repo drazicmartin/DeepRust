@@ -21,6 +21,15 @@ pub const SIGMOID: Function =  Function {
     },
 };
 
+pub const LINEAR: Function =  Function {
+    derivate: |x: f32| -> f32 {
+        1f32
+    },
+    forward: |x: f32| -> f32 {
+        x
+    },
+};
+
 pub const RELU: Function =  Function {
     derivate: |x: f32| -> f32 {
         match x {
