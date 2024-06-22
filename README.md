@@ -16,4 +16,4 @@ Target One :
     - [x] Update Models
 
 target Two:
-- [ ] Train simple Network on Image
+- [ ] Train simple Network on Image for Digits Recognition
